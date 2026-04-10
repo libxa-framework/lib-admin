@@ -65,6 +65,9 @@ class AdminServiceProvider extends ModuleServiceProvider
         $base = __DIR__;
         $app = $this->app->basePath();
 
+        // Debug: Log that publishables are being declared
+        error_log("AdminServiceProvider: Declaring publishables from $base to $app");
+
         $this->publishes([$base . '/Database/Migrations' => $app . '/src/database/migrations'], 'admin-migrations');
         $this->publishes([$base . '/Config/admin.php' => $app . '/src/config/admin.php'], 'admin-config');
         $this->publishes([$base . '/Resources/lang' => $app . '/src/lang/admin'], 'admin-lang');
