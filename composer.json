@@ -1,0 +1,22 @@
+{
+    "name": "libxa/lib-admin",
+    "description": "LibAdmin — Zero-config, attribute-driven admin panel for LibxaFrame",
+    "type": "libxa-module",
+    "license": "MIT",
+    "require": {
+        "php": "^8.3",
+        "libxa/framework": "*"
+    },
+    "autoload": {
+        "psr-4": {
+            "Libxa\\Admin\\": "src/"
+        }
+    },
+    "extra": {
+        "Libxa": {
+            "providers": [
+                "Libxa\\Admin\\AdminServiceProvider"
+            ]
+        }
+    }
+}
