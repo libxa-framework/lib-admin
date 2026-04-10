@@ -28,6 +28,13 @@ class AdminServiceProvider extends ModuleServiceProvider
         $this->app->singleton(\Libxa\Admin\Http\Middleware\RedirectIfAuthenticated::class, function ($app) {
             return new \Libxa\Admin\Http\Middleware\RedirectIfAuthenticated($app->make('admin.auth'));
         });
+
+        // Register Console Commands
+        $this->commands([
+            \Libxa\Admin\Console\Commands\MakeUserCommand::class,
+            \Libxa\Admin\Console\Commands\MakeResourceCommand::class,
+            \Libxa\Admin\Console\Commands\RolesCommand::class,
+        ]);
     }
 
     public function boot(): void
