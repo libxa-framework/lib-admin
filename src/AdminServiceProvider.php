@@ -28,13 +28,6 @@ class AdminServiceProvider extends ModuleServiceProvider
         $this->app->singleton(\Libxa\Admin\Http\Middleware\RedirectIfAuthenticated::class, function ($app) {
             return new \Libxa\Admin\Http\Middleware\RedirectIfAuthenticated($app->make('admin.auth'));
         });
-
-        // Register Console Commands
-        $this->commands([
-            \Libxa\Admin\Console\Commands\MakeUserCommand::class,
-            \Libxa\Admin\Console\Commands\MakeResourceCommand::class,
-            \Libxa\Admin\Console\Commands\RolesCommand::class,
-        ]);
     }
 
     public function boot(): void
@@ -52,10 +45,13 @@ class AdminServiceProvider extends ModuleServiceProvider
         // 4. Load Translations
         $this->loadTranslationsFrom(__DIR__ . '/Resources/lang', 'admin');
 
-        // 5. Register Events
+        // 5. Load Console Commands
+        $this->loadCommandsFrom(__DIR__ . '/Console/Commands');
+
+        // 6. Register Events
         $this->listen([]);
 
-        // 6. Declare publishable assets
+        // 7. Declare publishable assets
         $this->declarePublishables();
     }
 
