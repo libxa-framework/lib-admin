@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Libxa\Admin;
 
+use Libxa\Foundation\Application;
 use Libxa\Foundation\ModuleServiceProvider;
 
 class AdminServiceProvider extends ModuleServiceProvider
@@ -70,8 +71,19 @@ class AdminServiceProvider extends ModuleServiceProvider
 
         $this->publishes([$base . '/Database/Migrations' => $app . '/src/database/migrations'], 'admin-migrations');
         $this->publishes([$base . '/Config/admin.php' => $app . '/src/config/admin.php'], 'admin-config');
-        $this->publishes([$base . '/Resources/lang' => $app . '/src/lang/admin'], 'admin-lang');
+        $this->publishes([
+            __DIR__ . '/../public' => base_path('public/vendor/admin'),
+        ], 'admin-assets');
+
+        // Allow publishing the Service Provider
+        if (Application::getInstance()->isCli()) {
+            $this->publishes([
+                __DIR__ . '/../stubs/AdminPanelProvider.stub' => base_path('src/app/Providers/AdminPanelProvider.php'),
+            ], 'admin-provider');
+        }
+
         $this->publishes([$base . '/Resources/views' => $app . '/src/resources/views/vendor/admin'], 'admin-views');
+        $this->publishes([$base . '/Resources/lang' => $app . '/src/lang/admin'], 'admin-lang');
 
         // Publish everything at once
         $this->publishes([

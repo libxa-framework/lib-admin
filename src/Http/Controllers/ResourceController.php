@@ -18,14 +18,56 @@ class ResourceController
     public function index(string $resource): Response
     {
         $user = $this->auth->user();
-        $items = DB::table($resource)->get();
-        return view('admin::resources.index', compact('resource', 'user', 'items'));
+        // Resolve AdminResource class to get widgets and definitions
+        $resourceClass = $this->resolveResourceClass($resource);
+        
+        $items = [];
+        if ($resourceClass) {
+            $items = $resourceClass::getModel()::all();
+        } else {
+            $items = DB::table($resource)->get();
+        }
+        
+        $headerWidgets = [];
+        $footerWidgets = [];
+        $columnDefs = null;
+        
+        if ($resourceClass) {
+            /** @var \Libxa\Admin\Resources\AdminResource $resInstance */
+            $resInstance = new $resourceClass();
+            $headerWidgets = array_map(fn($w) => new $w(), $resInstance->getHeaderWidgets());
+            $footerWidgets = array_map(fn($w) => new $w(), $resInstance->getFooterWidgets());
+            $columnDefs = array_map(fn($col) => $col->toArray(), $resInstance->columns());
+        }
+
+        return view('admin::resources.index', compact('resource', 'user', 'items', 'headerWidgets', 'footerWidgets', 'columnDefs'));
+    }
+
+    protected function resolveResourceClass(string $resourceSlug): ?string
+    {
+        $resources = \Libxa\Admin\Facades\Admin::getResources();
+        
+        foreach ($resources as $resClass) {
+            $slug = str_replace(' ', '_', strtolower($resClass::getPluralLabel()));
+            if ($slug === $resourceSlug) {
+                return $resClass;
+            }
+        }
+        return null;
     }
 
     public function create(string $resource): Response
     {
         $user = $this->auth->user();
-        return view('admin::resources.create', compact('resource', 'user'));
+        $resourceClass = $this->resolveResourceClass($resource);
+        $fields = [];
+        
+        if ($resourceClass) {
+            $resInstance = new $resourceClass();
+            $fields = array_map(fn($f) => $f->viewData(), $resInstance->fields());
+        }
+
+        return view('admin::resources.create', compact('resource', 'user', 'fields'));
     }
 
     public function store(Request $request, string $resource): Response
@@ -58,8 +100,24 @@ class ResourceController
     public function edit(string $resource, string $id): Response
     {
         $user = $this->auth->user();
-        $item = DB::table($resource)->where('id', $id)->first();
-        return view('admin::resources.edit', compact('resource', 'id', 'user', 'item'));
+        $resourceClass = $this->resolveResourceClass($resource);
+        $item = null;
+        $fields = [];
+        
+        if ($resourceClass) {
+            $modelClass = $resourceClass::getModel();
+            $item = $modelClass::find($id);
+            
+            if ($item) {
+                $resInstance = new $resourceClass();
+                $resInstance->item = $item;
+                $fields = array_map(fn($f) => $f->viewData(), $resInstance->fields());
+            }
+        } else {
+            $item = DB::table($resource)->where('id', $id)->first();
+        }
+
+        return view('admin::resources.edit', compact('resource', 'id', 'user', 'item', 'fields'));
     }
 
     public function update(Request $request, string $resource, string $id): Response

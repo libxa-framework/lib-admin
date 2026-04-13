@@ -18,15 +18,25 @@ abstract class AdminField
     protected bool $onlyOnCreate = false;
     protected bool $onlyOnEdit = false;
     protected bool $onlyOnView = false;
+    
+    // Validation properties
+    protected ?string $uniqueTable = null;
+    protected ?string $uniqueColumn = null;
+    protected mixed $uniqueIgnore = null;
+    protected array $rules = [];
 
     public function __construct(string $name)
     {
         $this->name = $name;
     }
 
-    public static function make(string $name): static
+    /**
+     * Create a new field instance.
+     * Variadic to allow sub-classes to have custom constructors.
+     */
+    public static function make(mixed ...$args): static
     {
-        return new static($name);
+        return new static(...$args);
     }
 
     public function getName(): string
@@ -84,6 +94,11 @@ abstract class AdminField
     {
         $this->hint = $hint;
         return $this;
+    }
+
+    public function helperText(string $text): static
+    {
+        return $this->hint($text);
     }
 
     public function getHint(): string
@@ -150,14 +165,39 @@ abstract class AdminField
         ];
     }
 
+    public function unique(string $table, ?string $column = null, mixed $ignore = null): static
+    {
+        $this->uniqueTable = $table;
+        $this->uniqueColumn = $column;
+        $this->uniqueIgnore = $ignore;
+        return $this;
+    }
+
+    public function setRules(array $rules): static
+    {
+        $this->rules = $rules;
+        return $this;
+    }
+
     public function rules(): array
     {
-        $rules = [];
+        $rules = $this->rules;
 
         if ($this->required) {
             $rules[] = 'required';
         } elseif ($this->nullable) {
             $rules[] = 'nullable';
+        }
+
+        if ($this->uniqueTable) {
+            $unique = "unique:{$this->uniqueTable}";
+            if ($this->uniqueColumn) {
+                $unique .= ",{$this->uniqueColumn}";
+            }
+            if ($this->uniqueIgnore) {
+                $unique .= ",{$this->uniqueIgnore}";
+            }
+            $rules[] = $unique;
         }
 
         return $rules;

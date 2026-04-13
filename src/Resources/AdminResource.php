@@ -6,9 +6,9 @@ namespace Libxa\Admin\Resources;
 
 abstract class AdminResource
 {
-    protected static string $model;
-    protected static string $label;
-    protected static string $pluralLabel;
+    protected static string|null $model = null;
+    protected static string|null $label = null;
+    protected static string|null $pluralLabel = null;
     protected static string $icon = 'folder';
     protected static string $group = 'General';
     protected static string $defaultSort = 'id';
@@ -16,19 +16,22 @@ abstract class AdminResource
     protected static int $perPage = 25;
     protected static bool $softDeletes = false;
 
-    public static function getModel(): string
+    /** @var \Libxa\Atlas\Model|null The current model instance being processed */
+    public ?\Libxa\Atlas\Model $item = null;
+
+    public static function getModel(): string|null
     {
         return static::$model;
     }
 
-    public static function getLabel(): string
+    public static function getLabel(): string|null
     {
-        return static::$label;
+        return static::$label ?? str_replace('Resource', '', class_basename(static::class));
     }
 
-    public static function getPluralLabel(): string
+    public static function getPluralLabel(): string|null
     {
-        return static::$pluralLabel ?? static::getLabel();
+        return static::$pluralLabel ?? (static::getLabel() . 's');
     }
 
     public static function getIcon(): string
@@ -86,6 +89,16 @@ abstract class AdminResource
     }
 
     public function headerActions(): array
+    {
+        return [];
+    }
+
+    public function getHeaderWidgets(): array
+    {
+        return [];
+    }
+
+    public function getFooterWidgets(): array
     {
         return [];
     }

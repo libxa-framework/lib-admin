@@ -25,6 +25,9 @@ $router->group(['middleware' => \Libxa\Admin\Http\Middleware\AdminAuthMiddleware
     $router->get('/dashboard', [\Libxa\Admin\Http\Controllers\DashboardController::class, 'index'])
         ->name('admin.dashboard');
 
+    $router->get('/pages/{slug}', [\Libxa\Admin\Http\Controllers\PageController::class, 'show'])
+        ->name('admin.pages.show');
+
     $router->get('/resources/{resource}', [\Libxa\Admin\Http\Controllers\ResourceController::class, 'index'])
         ->name('admin.resource.index');
 

@@ -11,6 +11,8 @@ abstract class AdminColumn
     protected bool $sortable = false;
     protected bool $searchable = false;
     protected bool $copyable = false;
+    protected ?\Closure $formatter = null;
+    protected bool $isHtml = false;
 
     public function __construct(string $name)
     {
@@ -71,6 +73,23 @@ abstract class AdminColumn
         return $this->copyable;
     }
 
+    public function formatUsing(\Closure $formatter): static
+    {
+        $this->formatter = $formatter;
+        return $this;
+    }
+
+    public function html(bool $allow = true): static
+    {
+        $this->isHtml = $allow;
+        return $this;
+    }
+
+    public function dateTime(string $format = 'Y-m-d H:i:s'): static
+    {
+        return $this->formatUsing(fn($val) => $val ? date($format, is_numeric($val) ? (int)$val : strtotime($val)) : null);
+    }
+
     public function view(): string
     {
         return 'admin.columns.text';
@@ -79,11 +98,22 @@ abstract class AdminColumn
     public function viewData(): array
     {
         return [
-            'name' => $this->name,
-            'label' => $this->getLabel(),
-            'sortable' => $this->sortable,
+            'name'       => $this->name,
+            'label'      => $this->getLabel(),
+            'sortable'   => $this->sortable,
             'searchable' => $this->searchable,
-            'copyable' => $this->copyable,
+            'copyable'   => $this->copyable,
+            'isHtml'     => $this->isHtml,
+            'formatter'  => $this->formatter,
         ];
+    }
+
+    /**
+     * Serialize the column definition to an array.
+     * Used by ResourceController to pass column metadata to views.
+     */
+    public function toArray(): array
+    {
+        return $this->viewData();
     }
 }

@@ -1,0 +1,41 @@
+<?php
+
+declare(strict_types=1);
+
+namespace App\Providers;
+
+use Libxa\Container\ServiceProvider;
+use Libxa\Admin\Facades\Admin;
+
+class AdminPanelProvider extends ServiceProvider
+{
+    public function register(): void
+    {
+        // Bind additional panel configurations here
+    }
+
+    public function boot(): void
+    {
+        Admin::registerResources([
+            // Add your custom App\Admin\Resources classes here
+            // App\Admin\Resources\UserResource::class,
+        ]);
+
+        Admin::registerPages([
+            // Add your custom App\Admin\Pages classes here
+            // App\Admin\Pages\DashboardPage::class,
+        ]);
+
+        Admin::registerWidgets([
+            // Add your custom App\Admin\Widgets classes here
+        ]);
+
+        // Register custom links (optional)
+        /* Admin::registerNavigation([
+            ['icon' => 'public', 'label' => 'Live Site', 'href' => '/', 'group' => 'App'],
+        ]); */
+
+        // Render Hooks
+        /* Admin::registerRenderHook('sidebar.footer', fn() => view('admin.sidebar-footer')); */
+    }
+}

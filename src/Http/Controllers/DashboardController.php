@@ -17,6 +17,11 @@ class DashboardController
     public function index(): Response
     {
         $user = $this->auth->user();
-        return view('admin::dashboard', compact('user'));
+        $widgets = \Libxa\Admin\Facades\Admin::getWidgets();
+        
+        // Sort widgets by their defined sort order
+        usort($widgets, fn($a, $b) => $a->getSort() <=> $b->getSort());
+
+        return view('admin::dashboard', compact('user', 'widgets'));
     }
 }
