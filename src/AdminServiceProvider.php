@@ -23,6 +23,19 @@ class AdminServiceProvider extends ModuleServiceProvider
 
         $this->app->alias('admin.plugins', \Libxa\Admin\Plugins\PluginManager::class);
 
+        $this->app->singleton('admin.media', function ($app) {
+            return new \Libxa\Admin\Media\MediaStore(
+                storage: $app->make('storage'),
+                disk: (string) $this->config('admin.media.disk', 'public'),
+                directory: trim((string) $this->config('admin.media.path', 'media'), '/'),
+                maxBytes: \Libxa\Admin\Media\MediaStore::parseSize(
+                    $this->config('admin.media.max_file_size', '10mb'),
+                ),
+            );
+        });
+
+        $this->app->alias('admin.media', \Libxa\Admin\Media\MediaStore::class);
+
         $this->app->singleton('admin.auth', function ($app) {
             return new \Libxa\Admin\Auth\AdminGuard(
                 new \Libxa\Admin\Auth\AdminUserProvider(),

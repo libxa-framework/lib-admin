@@ -168,6 +168,19 @@ Both of these are here because LibAdmin got them wrong: the resource name came
 from the URL and was used directly as a table name, so any table in the
 database could be read, written and deleted through it.
 
+## Uploads
+
+If your plugin accepts files, use the media store rather than writing your own:
+
+```php
+app('admin.media')->store($request->file('file'), $actorId);
+```
+
+It detects the type from the bytes, requires the extension and the contents to
+agree, generates the stored filename, and refuses anything not on the
+allow-list. `UploadedFile::getMimeType()` returns what the client said, so
+anything trusting it accepts a PHP script declared as a PNG.
+
 ## Testing
 
 Test the plugin without a panel:
