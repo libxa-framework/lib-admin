@@ -18,10 +18,21 @@ class AdminUserProvider implements UserProvider
     public function retrieveByToken(mixed $identifier, string $token): ?Authenticatable
     {
         $user = AdminUser::find((int) $identifier);
-        if ($user && $user->getRememberToken() === $token) {
-            return $user;
+
+        if (! $user) {
+            return null;
         }
-        return null;
+
+        $stored = (string) $user->getRememberToken();
+
+        // hash_equals, not ===. A plain comparison returns as soon as two
+        // bytes differ, so how long it takes leaks how much of the token was
+        // guessed correctly, and a remember token is a credential.
+        if ($stored === '' || ! hash_equals($stored, $token)) {
+            return null;
+        }
+
+        return $user;
     }
 
     public function updateRememberToken(Authenticatable $user, string $token): void

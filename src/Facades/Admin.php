@@ -37,6 +37,24 @@ class Admin
         return self::$resolvedInstance;
     }
 
+    /**
+     * The panel itself.
+     *
+     * A real method rather than something __callStatic forwards, because the
+     * forwarding calls `panel()` *on* the panel, which does not exist there.
+     * Plugins are handed this instance, so it has to be reachable.
+     */
+    public static function panel(): AdminPanel
+    {
+        return static::resolveFacadeInstance();
+    }
+
+    /** Forget the resolved panel. For tests, which need a clean one per case. */
+    public static function flush(): void
+    {
+        static::$resolvedInstance = null;
+    }
+
     public static function __callStatic(string $method, array $args)
     {
         $instance = static::resolveFacadeInstance();
