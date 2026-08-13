@@ -1,4 +1,4 @@
-﻿{
+{
     "name": "libxa/lib-admin",
     "description": "LibAdmin: a security-first, plugin-extensible admin panel for LibxaFrame.",
     "type": "libxa-module",
