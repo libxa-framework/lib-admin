@@ -4,6 +4,7 @@ declare(strict_types=1);
 
 namespace Libxa\Admin\Http\Controllers;
 
+use Libxa\Admin\Audit\AdminAudit;
 use Libxa\Admin\Auth\AdminGuard;
 use Libxa\Admin\Panel\ResourceRegistry;
 use Libxa\Admin\Resources\AdminResource;
@@ -29,9 +30,12 @@ use Libxa\Http\Response;
  */
 class ResourceController
 {
+    private AdminAudit $audit;
+
     public function __construct(
         protected AdminGuard $auth,
     ) {
+        $this->audit = new AdminAudit($auth);
     }
 
     public function index(string $resource): Response
@@ -95,10 +99,12 @@ class ResourceController
         }
 
         try {
-            DB::table($table)->insert($this->withTimestamps($data, $table, creating: true));
+            $id = DB::table($table)->insert($this->withTimestamps($data, $table, creating: true));
         } catch (\PDOException $e) {
             return back()->with('errors', ['form' => [$this->constraintMessage($e)]]);
         }
+
+        $this->audit->record('resource.created', $resource, $id, null, $data);
 
         return redirect('/admin/resources/' . $resource);
     }
@@ -175,11 +181,17 @@ class ResourceController
             return redirect('/admin/resources/' . $resource);
         }
 
+        // Read before the write. Snapshotting afterwards records the new
+        // values twice and loses the only copy of what was there before.
+        $before = $this->audit->snapshot($table, $id);
+
         try {
             DB::table($table)->where('id', $id)->updateRecord($this->withTimestamps($data, $table, creating: false));
         } catch (\PDOException $e) {
             return back()->with('errors', ['form' => [$this->constraintMessage($e)]]);
         }
+
+        $this->audit->record('resource.updated', $resource, $id, $before, $data);
 
         return redirect('/admin/resources/' . $resource);
     }
@@ -198,7 +210,13 @@ class ResourceController
             return $this->notFound();
         }
 
+        // The deleted row is the whole point of auditing a delete: after this
+        // runs there is nothing left anywhere to say what was removed.
+        $before = $this->audit->snapshot($table, $id);
+
         DB::table($table)->where('id', $id)->delete();
+
+        $this->audit->record('resource.deleted', $resource, $id, $before, null);
 
         return redirect('/admin/resources/' . $resource);
     }

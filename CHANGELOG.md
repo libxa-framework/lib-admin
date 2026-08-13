@@ -12,6 +12,43 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.5.0] - 2026-08-13
+
+### Added
+
+- **The admin audit trail now records something.**
+
+  `audit_logs` shipped from the first release, with two API endpoints to read
+  it, and nothing ever wrote a row — so the panel could create, edit and
+  delete any record in the application and leave nothing behind saying who did
+  it, which is the one question an audit trail exists to answer. Because the
+  endpoints were stubs returning an empty array, the empty response read as
+  "nothing has happened" rather than "this was never built".
+
+  Recorded now: `auth.login`, `auth.login_failed`, `auth.logout`,
+  `resource.created`, `resource.updated`, `resource.deleted` — each with the
+  acting admin, the resource and id, the IP and user agent, and the values.
+
+  Three things it is careful about:
+
+  - **It never throws.** A trail that can take a request down with it is one
+    that gets switched off by the first person it inconveniences.
+  - **The old values are read before the write.** Snapshotting afterwards
+    records the new values twice and loses the only copy of what was there
+    before — and for a delete, the only copy anywhere.
+  - **`password`, `remember_token`, `api_token` and `secret` are redacted.** An
+    audit row is read by more people than the record it came from; a password
+    hash in one is an offline cracking target.
+
+  Failed logins are recorded with the attempted address and no actor. That
+  half is the more interesting one: a run of them against a single address is
+  what a brute-force attempt looks like from inside the panel.
+
+- **`GET /admin/api/audit-logs` and `/admin/api/audit-logs/{id}`** read the
+  table for real, with filtering by `event`, `resource_type` and
+  `admin_user_id`, pagination capped at 100 per page, and `old_values` /
+  `new_values` decoded rather than handed back as JSON inside JSON.
+
 ## [0.4.0] - 2026-08-13
 
 Everything here came out of installing the panel into a real application and
