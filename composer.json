@@ -1,11 +1,11 @@
-{
+﻿{
     "name": "libxa/lib-admin",
     "description": "LibAdmin: a security-first, plugin-extensible admin panel for LibxaFrame.",
     "type": "libxa-module",
     "license": "MIT",
     "require": {
         "php": "^8.3",
-        "libxa/framework": "^0.11.0"
+        "libxa/framework": "^0.11.1"
     },
     "autoload": {
         "psr-4": {

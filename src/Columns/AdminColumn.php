@@ -90,9 +90,17 @@ abstract class AdminColumn
         return $this->formatUsing(fn($val) => $val ? date($format, is_numeric($val) ? (int)$val : strtotime($val)) : null);
     }
 
+    /**
+     * The partial that renders one cell of this column.
+     *
+     * Views are registered under the `admin` namespace, so the separator is
+     * `::`. This returned a dotted name for a long time, which did not resolve
+     * to anything — but nothing looked it up either, so the table rendered
+     * every column as plain text and the mistake stayed invisible.
+     */
     public function view(): string
     {
-        return 'admin.columns.text';
+        return 'admin::columns.text';
     }
 
     public function viewData(): array
@@ -105,7 +113,26 @@ abstract class AdminColumn
             'copyable'   => $this->copyable,
             'isHtml'     => $this->isHtml,
             'formatter'  => $this->formatter,
+            'view'       => $this->view(),
         ];
+    }
+
+    /**
+     * The value a cell should display, with any formatter applied.
+     *
+     * Kept static and array-shaped because the controller serialises columns
+     * before handing them to the view; this is the one place that knows a
+     * formatter exists, so the four cell partials cannot each forget it.
+     *
+     * @param array<string, mixed> $column A column's viewData().
+     */
+    public static function valueFor(array $column, object $item): mixed
+    {
+        $raw = $item->{$column['name']} ?? null;
+
+        $formatter = $column['formatter'] ?? null;
+
+        return $formatter instanceof \Closure ? $formatter($raw, $item) : $raw;
     }
 
     /**

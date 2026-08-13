@@ -98,24 +98,12 @@
                         <tr class="group hover:bg-primary-container/20 transition-all cursor-pointer">
 
                             @if(isset($columnDefs))
+                                {{-- Each column renders its own cell. This used
+                                     to inline a text cell for every column, so
+                                     badges, booleans and images all came out as
+                                     raw values and their partials were dead. --}}
                                 @foreach($columnDefs as $col)
-                                    <td class="px-6 py-4 text-sm text-on-surface-variant">
-                                        @php
-                                            $val = $item->{$col['name']} ?? '-';
-                                            if (($col['limit'] ?? 0) > 0 && strlen($val) > $col['limit']) {
-                                                $val = substr($val, 0, $col['limit']) . '…';
-                                            }
-                                        @endphp
-                                        <div class="flex items-center gap-2">
-                                            <span class="{{ $col['wrap'] ?? false ? 'whitespace-normal' : 'whitespace-nowrap' }}">{{ $val }}</span>
-                                            @if($col['copyable'] ?? false)
-                                                <button onclick="navigator.clipboard.writeText('{{ $item->{$col['name']} ?? '' }}')"
-                                                        class="opacity-0 group-hover:opacity-100 transition-opacity p-0.5 hover:text-primary">
-                                                    <span class="material-symbols-outlined text-xs">content_copy</span>
-                                                </button>
-                                            @endif
-                                        </div>
-                                    </td>
+                                    @include($col['view'] ?? 'admin::columns.text', ['column' => $col, 'item' => $item])
                                 @endforeach
                             @else
                                 @foreach($columns as $col)
@@ -137,6 +125,7 @@
                                         <span class="material-symbols-outlined text-base">edit</span>
                                     </a>
                                     <form action="/admin/resources/{{ $resource }}/{{ $item->id }}" method="POST" class="inline">
+                                        @csrf
                                         <input type="hidden" name="_method" value="DELETE">
                                         <button type="submit"
                                                 onclick="return confirm('Delete this {{ rtrim($resource, 's') }}? This cannot be undone.')"

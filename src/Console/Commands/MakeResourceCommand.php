@@ -35,6 +35,20 @@ class MakeResourceCommand extends Command
     {
         $io = new SymfonyStyle($input, $output);
         $name = Str::studly($input->getArgument('name'));
+
+        // "Subscriber" and "SubscriberResource" mean the same thing, and
+        // appending unconditionally produced SubscriberResourceResource. The
+        // label and the plural are derived from this name too, so the panel
+        // ended up with a "Subscriber Resources" section.
+        if (str_ends_with($name, 'Resource')) {
+            $name = substr($name, 0, -strlen('Resource'));
+        }
+
+        if ($name === '') {
+            $io->error('A resource needs a name of its own, not just "Resource".');
+
+            return Command::FAILURE;
+        }
         $fromSchema = $input->getOption('from-schema');
         $softDeletes = $input->getOption('soft-deletes');
 
@@ -81,9 +95,13 @@ class MakeResourceCommand extends Command
         $lines[] = '';
         $lines[] = "class {$name}Resource extends AdminResource";
         $lines[] = '{';
-        $lines[] = '    protected static string $model = \App\Models\\' . $name . '::class;';
-        $lines[] = '    protected static string $label = \'' . $name . '\';';
-        $lines[] = '    protected static string $pluralLabel = \'' . $plural . '\';';
+        // These three are nullable on AdminResource, and PHP requires a
+        // redeclared typed property to match exactly. Emitting `string` here
+        // made every generated resource fatal the moment it was autoloaded:
+        // "Type of ...::$model must be ?string (as in class AdminResource)".
+        $lines[] = '    protected static string|null $model = \App\Models\\' . $name . '::class;';
+        $lines[] = '    protected static string|null $label = \'' . $name . '\';';
+        $lines[] = '    protected static string|null $pluralLabel = \'' . $plural . '\';';
         $lines[] = '    protected static string $icon = \'folder\';';
         $lines[] = '    protected static string $group = \'General\';';
         $lines[] = '    protected static string $defaultSort = \'created_at\';';

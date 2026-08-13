@@ -45,48 +45,40 @@
     {{-- Quick Links (left 2/3) --}}
     <div class="xl:col-span-2 bg-surface-container-lowest rounded-2xl p-8 shadow-sm">
         <h3 class="text-lg font-bold font-headline text-on-surface mb-6">Quick Actions</h3>
-        <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
-            <a href="/admin/resources/users"
-               class="flex items-center gap-4 p-4 bg-surface-container-low rounded-xl hover:bg-primary-container/30 transition-colors group border border-slate-100">
-                <div class="p-3 bg-primary-container text-primary rounded-xl">
-                    <span class="material-symbols-outlined">manage_accounts</span>
-                </div>
-                <div>
-                    <p class="font-bold text-sm text-on-surface group-hover:text-primary transition-colors">Manage Users</p>
-                    <p class="text-xs text-on-surface-variant mt-0.5">View, create &amp; edit user records</p>
-                </div>
-            </a>
-            <a href="#"
-               class="flex items-center gap-4 p-4 bg-surface-container-low rounded-xl hover:bg-secondary-container/30 transition-colors group border border-slate-100">
-                <div class="p-3 bg-secondary-container text-secondary rounded-xl">
-                    <span class="material-symbols-outlined">description</span>
-                </div>
-                <div>
-                    <p class="font-bold text-sm text-on-surface group-hover:text-secondary transition-colors">View Reports</p>
-                    <p class="text-xs text-on-surface-variant mt-0.5">Access system analytics</p>
-                </div>
-            </a>
-            <a href="#"
-               class="flex items-center gap-4 p-4 bg-surface-container-low rounded-xl hover:bg-tertiary-container/30 transition-colors group border border-slate-100">
-                <div class="p-3 bg-tertiary-container text-tertiary rounded-xl">
-                    <span class="material-symbols-outlined">settings</span>
-                </div>
-                <div>
-                    <p class="font-bold text-sm text-on-surface group-hover:text-tertiary transition-colors">Settings</p>
-                    <p class="text-xs text-on-surface-variant mt-0.5">Configure system preferences</p>
-                </div>
-            </a>
-            <a href="#"
-               class="flex items-center gap-4 p-4 bg-surface-container-low rounded-xl hover:bg-surface-variant/60 transition-colors group border border-slate-100">
-                <div class="p-3 bg-surface-variant text-on-surface-variant rounded-xl">
-                    <span class="material-symbols-outlined">monitoring</span>
-                </div>
-                <div>
-                    <p class="font-bold text-sm text-on-surface transition-colors">Analytics</p>
-                    <p class="text-xs text-on-surface-variant mt-0.5">Deep-dive performance data</p>
-                </div>
-            </a>
-        </div>
+
+        {{-- Built from the resources actually registered. These were four
+             hardcoded cards: one pointed at /admin/resources/users whether or
+             not such a resource existed, and three pointed at "#". --}}
+        @php
+            $quickActions = array_values(\Libxa\Admin\Facades\Admin::getResources());
+        @endphp
+
+        @if($quickActions === [])
+            <p class="text-sm text-on-surface-variant">
+                No resources registered yet. Create one with
+                <code class="px-1.5 py-0.5 bg-surface-container rounded text-xs">php libxa admin:make-resource</code>
+                and register it in your panel provider.
+            </p>
+        @else
+            <div class="grid grid-cols-1 sm:grid-cols-2 gap-4">
+                @foreach($quickActions as $resourceClass)
+                    <a href="/admin/resources/{{ \Libxa\Admin\Panel\ResourceRegistry::slugFor($resourceClass) }}"
+                       class="flex items-center gap-4 p-4 bg-surface-container-low rounded-xl hover:bg-primary-container/30 transition-colors group border border-slate-100">
+                        <div class="p-3 bg-primary-container text-primary rounded-xl">
+                            <span class="material-symbols-outlined">{{ $resourceClass::getIcon() }}</span>
+                        </div>
+                        <div>
+                            <p class="font-bold text-sm text-on-surface group-hover:text-primary transition-colors">
+                                Manage {{ $resourceClass::getPluralLabel() }}
+                            </p>
+                            <p class="text-xs text-on-surface-variant mt-0.5">
+                                View, create &amp; edit {{ strtolower($resourceClass::getPluralLabel()) }}
+                            </p>
+                        </div>
+                    </a>
+                @endforeach
+            </div>
+        @endif
     </div>
 
     {{-- Live Intelligence (right 1/3) --}}

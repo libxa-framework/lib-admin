@@ -1,0 +1,117 @@
+name: CI
+
+on:
+  push:
+    branches: [main, develop]
+  pull_request:
+    branches: [main, develop]
+  workflow_dispatch:
+
+permissions:
+  contents: read
+
+concurrency:
+  group: ci-${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: ${{ github.ref != 'refs/heads/main' }}
+
+jobs:
+  tests:
+    name: Tests · PHP ${{ matrix.php }}
+    runs-on: ubuntu-latest
+
+    strategy:
+      fail-fast: false
+      matrix:
+        php: ["8.3", "8.4", "8.5"]
+        dependencies: [highest]
+        include:
+          # Guards the lower bound of every constraint in composer.json.
+          # Without it, ^0.11.1 is only ever proven against the newest
+          # release and the declared minimum is fiction.
+          - php: "8.3"
+            dependencies: lowest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: ${{ matrix.php }}
+          extensions: mbstring, xml, ctype, iconv, intl, pdo_sqlite, openssl, fileinfo
+          coverage: none
+          ini-values: error_reporting=E_ALL, display_errors=On
+
+      - name: Validate composer.json
+        run: composer validate --strict --no-check-publish
+
+      - name: Install dependencies
+        run: |
+          if [ "${{ matrix.dependencies }}" = "lowest" ]; then
+            composer update --prefer-lowest --prefer-stable --no-interaction --no-progress
+          else
+            composer update --no-interaction --no-progress
+          fi
+
+      - name: Lint every source file
+        run: |
+          set -euo pipefail
+          find src tests -name '*.php' -print0 | xargs -0 -n1 -P4 php -l > /dev/null
+
+      - name: Run test suite
+        run: vendor/bin/phpunit --no-coverage --colors=always
+
+  views:
+    name: Blade views compile
+    runs-on: ubuntu-latest
+
+    steps:
+      - name: Checkout
+        uses: actions/checkout@v4
+
+      - name: Setup PHP
+        uses: shivammathur/setup-php@v2
+        with:
+          php-version: "8.3"
+          coverage: none
+
+      - name: Install dependencies
+        run: composer update --no-interaction --no-progress
+
+      # A Blade view is not PHP until it is compiled, so `php -l` over the
+      # source says nothing about it. Every shipped view is compiled and the
+      # result linted, which catches a malformed directive before it reaches
+      # a page nobody opened during review.
+      - name: Compile and lint every shipped view
+        run: |
+          set -euo pipefail
+          php -r '
+              require "vendor/autoload.php";
+
+              $compiler = new Libxa\Blade\Compiler();
+              $failed = 0;
+
+              $files = new RecursiveIteratorIterator(
+                  new RecursiveDirectoryIterator("src/Resources/views", FilesystemIterator::SKIP_DOTS)
+              );
+
+              foreach ($files as $file) {
+                  if ($file->getExtension() !== "php") {
+                      continue;
+                  }
+
+                  $out = tempnam(sys_get_temp_dir(), "blade") . ".php";
+                  file_put_contents($out, $compiler->compile(file_get_contents($file->getPathname())));
+
+                  exec(escapeshellarg(PHP_BINARY) . " -l " . escapeshellarg($out), $lines, $status);
+                  unlink($out);
+
+                  if ($status !== 0) {
+                      fwrite(STDERR, $file->getPathname() . "\n" . implode("\n", $lines) . "\n");
+                      $failed++;
+                  }
+              }
+
+              exit($failed === 0 ? 0 : 1);
+          '

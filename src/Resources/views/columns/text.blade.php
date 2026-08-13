@@ -1,28 +1,35 @@
 {{--
-    TextColumn cell partial — renders a single cell value in a resource table.
-    Expected: $column (viewData array), $item (Eloquent model)
+    TextColumn cell.
+
+    Expects $column (a column's viewData array) and $item (the record).
+    Renders its own <td> so the resource table can include any column partial
+    in the same place without knowing which one it got.
 --}}
 @php
-    $name     = $column['name'];
-    $copyable = $column['copyable'] ?? false;
-    $wrap     = $column['wrap'] ?? false;
-    $limit    = $column['limit'] ?? 0;
+    $value = \Libxa\Admin\Columns\AdminColumn::valueFor($column, $item);
 
-    $raw = $item->$name ?? null;
-    $val = $raw ?? '—';
+    $limit = $column['limit'] ?? 0;
+    $display = $value === null || $value === '' ? '—' : (string) $value;
 
-    if ($limit > 0 && is_string($val) && mb_strlen($val) > $limit) {
-        $val = mb_substr($val, 0, $limit) . '…';
+    if ($limit > 0 && mb_strlen($display) > $limit) {
+        $display = mb_substr($display, 0, $limit) . '…';
     }
 @endphp
 
 <td class="px-6 py-4 text-sm text-on-surface-variant">
     <div class="flex items-center gap-2 group/cell">
-        <span class="{{ $wrap ? 'whitespace-normal break-words' : 'whitespace-nowrap' }}">{{ $val }}</span>
+        <span class="{{ ($column['wrap'] ?? false) ? 'whitespace-normal break-words' : 'whitespace-nowrap' }}">
+            {{-- html() is opt-in per column, so escaping stays the default. --}}
+            @if($column['isHtml'] ?? false)
+                {!! $display !!}
+            @else
+                {{ $display }}
+            @endif
+        </span>
 
-        @if($copyable && $raw !== null)
+        @if(($column['copyable'] ?? false) && $value !== null)
             <button type="button"
-                    onclick="navigator.clipboard.writeText({{ json_encode((string) $raw) }})"
+                    onclick="navigator.clipboard.writeText({{ json_encode((string) $value) }})"
                     class="opacity-0 group-hover/cell:opacity-100 transition-opacity p-0.5 rounded hover:text-primary text-on-surface-variant"
                     title="Copy value">
                 <span class="material-symbols-outlined text-xs">content_copy</span>

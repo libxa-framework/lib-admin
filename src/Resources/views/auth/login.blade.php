@@ -77,7 +77,11 @@
                 </div>
             @endif
 
-            <form method="POST" action="/admin/login" class="space-y-5">
+            <form method="POST" action="{{ $adminPath ?? '/admin' }}/login" class="space-y-5">
+
+                {{-- Without this the login POST is rejected as a CSRF failure
+                     and the panel cannot be signed into at all. --}}
+                @csrf
 
                 {{-- Email --}}
                 <div class="space-y-1.5">

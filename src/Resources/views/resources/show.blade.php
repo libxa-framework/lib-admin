@@ -49,21 +49,40 @@
             </div>
 
             <div class="divide-y divide-slate-50">
-                @php $properties = (array) $item; @endphp
+                {{-- Only the columns the resource declares. Casting the record
+                     to an array and printing every key showed columns the
+                     resource had deliberately left out of its table. --}}
+                @foreach($columnDefs as $column)
+                    @php
+                        $key = $column['name'];
+                        $value = \Libxa\Admin\Columns\AdminColumn::valueFor($column, $item);
 
-                @foreach($properties as $key => $value)
+                        // Casts and JSON columns arrive as arrays; the old
+                        // copy button passed them straight to addslashes(),
+                        // which is a TypeError, so the whole page 500'd.
+                        if (is_array($value) || is_object($value)) {
+                            $value = json_encode($value, JSON_PRETTY_PRINT | JSON_UNESCAPED_SLASHES);
+                        }
+
+                        $secret = in_array($key, ['password', 'remember_token'], true);
+                    @endphp
+
                     <div class="flex items-start gap-4 px-8 py-5 hover:bg-surface-container-low/40 transition-colors group">
                         <div class="w-40 shrink-0">
                             <p class="text-xs font-bold uppercase tracking-wider text-on-surface-variant">
-                                {{ ucfirst(str_replace('_', ' ', $key)) }}
+                                {{ $column['label'] }}
                             </p>
                         </div>
                         <div class="flex-1 flex items-center justify-between gap-3">
                             <p class="text-sm font-medium text-on-surface break-all">
-                                {{ $key === 'password' ? '••••••••' : ($value ?? '—') }}
+                                {{ $secret ? '••••••••' : (($value === null || $value === '') ? '—' : $value) }}
                             </p>
-                            @if($key !== 'password' && $value)
-                                <button onclick="navigator.clipboard.writeText('{{ addslashes($value) }}')"
+                            @if(! $secret && $value !== null && $value !== '')
+                                {{-- json_encode, not addslashes: it quotes the
+                                     string and escapes the characters that
+                                     would otherwise end the JS literal. --}}
+                                <button type="button"
+                                        onclick="navigator.clipboard.writeText({{ json_encode((string) $value) }})"
                                         class="opacity-0 group-hover:opacity-100 shrink-0 p-1.5 rounded-lg hover:bg-surface-container transition-all text-on-surface-variant hover:text-primary">
                                     <span class="material-symbols-outlined text-sm">content_copy</span>
                                 </button>
@@ -111,6 +130,7 @@
             <p class="text-xs font-bold uppercase tracking-wider text-error mb-3">Danger Zone</p>
             <p class="text-xs text-on-surface-variant mb-4">Deleting this record is permanent and cannot be undone.</p>
             <form action="/admin/resources/{{ $resource }}/{{ $item->id }}" method="POST">
+                @csrf
                 <input type="hidden" name="_method" value="DELETE">
                 <button type="submit"
                         onclick="return confirm('Permanently delete this {{ rtrim($resource, 's') }}?')"
