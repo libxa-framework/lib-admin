@@ -36,6 +36,15 @@ class AdminServiceProvider extends ModuleServiceProvider
 
         $this->app->alias('admin.media', \Libxa\Admin\Media\MediaStore::class);
 
+        // Shared, because it caches an admin's permissions for the life of a
+        // request and a page runs one check per row action and nav item. A
+        // fresh gate per resolution would make every one of them two joins.
+        $this->app->singleton('admin.gate', function () {
+            return new \Libxa\Admin\Authorization\Gate();
+        });
+
+        $this->app->alias('admin.gate', \Libxa\Admin\Authorization\Gate::class);
+
         $this->app->singleton('admin.auth', function ($app) {
             return new \Libxa\Admin\Auth\AdminGuard(
                 new \Libxa\Admin\Auth\AdminUserProvider(),
@@ -50,6 +59,10 @@ class AdminServiceProvider extends ModuleServiceProvider
 
         $this->app->singleton(\Libxa\Admin\Http\Middleware\RedirectIfAuthenticated::class, function ($app) {
             return new \Libxa\Admin\Http\Middleware\RedirectIfAuthenticated($app->make('admin.auth'));
+        });
+
+        $this->app->singleton(\Libxa\Admin\Http\Middleware\ApiAuthMiddleware::class, function ($app) {
+            return new \Libxa\Admin\Http\Middleware\ApiAuthMiddleware($app->make('admin.auth'));
         });
     }
 

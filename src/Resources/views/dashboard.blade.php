@@ -50,7 +50,11 @@
              hardcoded cards: one pointed at /admin/resources/users whether or
              not such a resource existed, and three pointed at "#". --}}
         @php
-            $quickActions = array_values(\Libxa\Admin\Facades\Admin::getResources());
+            $dashAdminId = isset($user) && is_object($user) && method_exists($user, 'getAuthIdentifier')
+                ? (is_numeric($user->getAuthIdentifier()) ? (int) $user->getAuthIdentifier() : null)
+                : null;
+
+            $quickActions = array_values(\Libxa\Admin\Facades\Admin::resourcesFor($dashAdminId));
         @endphp
 
         @if($quickActions === [])

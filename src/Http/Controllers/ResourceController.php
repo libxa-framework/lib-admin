@@ -6,6 +6,8 @@ namespace Libxa\Admin\Http\Controllers;
 
 use Libxa\Admin\Audit\AdminAudit;
 use Libxa\Admin\Auth\AdminGuard;
+use Libxa\Admin\Authorization\AuthorizesRequests;
+use Libxa\Admin\Authorization\Permission;
 use Libxa\Admin\Panel\ResourceRegistry;
 use Libxa\Admin\Resources\AdminResource;
 use Libxa\Atlas\DB;
@@ -30,6 +32,8 @@ use Libxa\Http\Response;
  */
 class ResourceController
 {
+    use AuthorizesRequests;
+
     private AdminAudit $audit;
 
     public function __construct(
@@ -46,6 +50,10 @@ class ResourceController
             return $class;
         }
 
+        if (($denied = $this->authorizeResource($class, Permission::VIEW_ANY)) !== null) {
+            return $denied;
+        }
+
         $model = $class::getModel();
         $items = $model !== null ? $model::all() : [];
 
@@ -60,6 +68,11 @@ class ResourceController
             'headerWidgets' => $headerWidgets,
             'footerWidgets' => $footerWidgets,
             'columnDefs' => $columnDefs,
+
+            // So the table shows the buttons this account can actually use.
+            // The routes behind them check for themselves; this is about not
+            // offering an action that will answer 403.
+            'can' => $this->abilities($class),
         ]);
     }
 
@@ -69,6 +82,10 @@ class ResourceController
 
         if (! $class instanceof AdminResource) {
             return $class;
+        }
+
+        if (($denied = $this->authorizeResource($class, Permission::CREATE)) !== null) {
+            return $denied;
         }
 
         return view('admin::resources.create', [
@@ -84,6 +101,13 @@ class ResourceController
 
         if (! $class instanceof AdminResource) {
             return $class;
+        }
+
+        // Checked again here, not only on create(). Hiding the form is a
+        // courtesy; this is the control. A POST does not have to come from a
+        // page the panel rendered.
+        if (($denied = $this->authorizeResource($class, Permission::CREATE)) !== null) {
+            return $denied;
         }
 
         $table = ResourceRegistry::tableFor($resource);
@@ -117,6 +141,10 @@ class ResourceController
             return $class;
         }
 
+        if (($denied = $this->authorizeResource($class, Permission::VIEW)) !== null) {
+            return $denied;
+        }
+
         $model = $class::getModel();
 
         return view('admin::resources.show', [
@@ -140,6 +168,10 @@ class ResourceController
 
         if (! $class instanceof AdminResource) {
             return $class;
+        }
+
+        if (($denied = $this->authorizeResource($class, Permission::UPDATE)) !== null) {
+            return $denied;
         }
 
         $model = $class::getModel();
@@ -167,6 +199,10 @@ class ResourceController
 
         if (! $class instanceof AdminResource) {
             return $class;
+        }
+
+        if (($denied = $this->authorizeResource($class, Permission::UPDATE)) !== null) {
+            return $denied;
         }
 
         $table = ResourceRegistry::tableFor($resource);
@@ -204,6 +240,10 @@ class ResourceController
             return $class;
         }
 
+        if (($denied = $this->authorizeResource($class, Permission::DELETE)) !== null) {
+            return $denied;
+        }
+
         $table = ResourceRegistry::tableFor($resource);
 
         if ($table === null) {
@@ -224,6 +264,22 @@ class ResourceController
     // ─────────────────────────────────────────────────────────────────────
     //  Guards
     // ─────────────────────────────────────────────────────────────────────
+
+    /**
+     * Which abilities the current admin holds on a resource.
+     *
+     * @return array<string, bool>
+     */
+    private function abilities(AdminResource $class): array
+    {
+        $abilities = [];
+
+        foreach (Permission::RESOURCE_ABILITIES as $ability) {
+            $abilities[$ability] = $this->allowsResource($class, $ability);
+        }
+
+        return $abilities;
+    }
 
     /**
      * A message for a database constraint failure, safe to show an operator.

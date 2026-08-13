@@ -12,6 +12,92 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.6.0] - 2026-08-13
+
+Roles and permissions are enforced. Until now they were furniture.
+
+> **Upgrading: your existing admin accounts hold no roles, so after this
+> release they can sign in and do nothing.** Run
+> `php libxa admin:sync-permissions` to create the default roles and their
+> permissions, then `php libxa admin:assign-role you@example.com superadmin`.
+> The sync command detects the situation and prints the exact command,
+> naming your accounts. It does not fix it for you: granting superadmin to
+> whichever account happens to be first is a privilege escalation performed by
+> a migration, and the only thing worse than an admin who cannot do anything
+> is one who silently can do everything.
+
+### Security
+
+- **The admin JSON API had no authentication on any route.** Thirteen routes,
+  no middleware, so every one answered anybody who asked, from anywhere, with
+  no session — including `/admin/api/audit-logs`, which holds the full
+  contents of deleted records. What remains of the API is now behind both a
+  session check and a permission.
+
+- **`POST /admin/api/login` accepted any email and password without checking
+  either**, and replied `{"token": "your-token-here"}`. A client built against
+  it believes it has authenticated somebody.
+
+- **Roles and permissions are enforced.** The `roles`, `permissions`,
+  `role_user` and `permission_role` tables shipped from the first release and
+  nothing ever read them. Access control was authentication-only: any account
+  that could log in could create, edit and delete every record of every
+  registered resource, and `--role` on `admin:make-user` was decoration.
+
+  Every resource action, the media library and the audit trail now check a
+  permission. Two rules the Gate keeps, both cutting against the convenient
+  default:
+
+  - **An unknown answer is a denial.** Missing tables or a failed query means
+    no, not yes. Failing open so as not to lock anyone out turns a broken
+    migration into an unprotected panel, silently.
+  - **An admin with no roles can do nothing.** Not "everything, because nobody
+    has configured this yet".
+
+  `superadmin` is allowed everything by *name* rather than by holding every
+  permission, so a resource added tomorrow is covered without another sync — a
+  role that had to hold them all would quietly lose access to each new
+  resource.
+
+### Added
+
+- `admin:sync-permissions` writes the permissions the registered resources
+  imply, creates the default roles, and grants each role what it is defined as
+  having. `--prune` deletes permissions no resource defines any more, along
+  with their grants. Re-running only adds: a permission revoked by hand stays
+  revoked, because a sync must not quietly restore access someone removed on
+  purpose.
+- Four default roles — `superadmin`, `admin`, `editor`, `viewer`.
+- `AdminResource::$authorize`, `permissionPrefix()` and `permissionFor()`.
+  Resources are protected by default; opting out is a decision made in the
+  class rather than one made by forgetting.
+- Navigation, dashboard Quick Actions and the per-row view/edit/delete buttons
+  show only what the account can use. Hiding a link is never the control —
+  every route checks for itself — but a sidebar of links that all answer 403
+  is a panel nobody can navigate.
+
+### Fixed
+
+- **`admin:assign-role` and `admin:revoke-role` reported success and wrote
+  nothing.** Someone granting access to a new colleague, or revoking it from a
+  departing one, saw it confirmed and it had not happened. Revoking the last
+  superadmin now requires `--force`, since it otherwise leaves a panel with
+  nobody who can grant anything and no way back through the UI.
+- **`admin:roles` printed a hardcoded list** of four names regardless of what
+  was in the database — which was nothing. It reads the table now, with holder
+  and permission counts, and `--permissions` to list the grants.
+- **`admin:make-user` seeds the default roles** before attaching one, so the
+  first account created on a fresh install can actually administer the panel.
+
+### Removed
+
+- **The stubbed JSON API**: `POST /login`, `POST /logout`, `GET /me`, and the
+  eight `/resources/*` methods. Every one was a TODO returning a fabricated
+  success — `"Resource created successfully"` while creating nothing. They are
+  gone rather than fixed: a token-authenticated JSON CRUD API is a feature to
+  design, not a hole to patch, and nothing can depend on the behaviour of
+  endpoints that never had any. `/admin/api/audit-logs` remains and is real.
+
 ## [0.5.0] - 2026-08-13
 
 ### Added

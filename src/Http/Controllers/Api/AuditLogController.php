@@ -4,6 +4,9 @@ declare(strict_types=1);
 
 namespace Libxa\Admin\Http\Controllers\Api;
 
+use Libxa\Admin\Auth\AdminGuard;
+use Libxa\Admin\Authorization\AuthorizesRequests;
+use Libxa\Admin\Authorization\Permission;
 use Libxa\Atlas\DB;
 use Libxa\Http\Response;
 
@@ -17,12 +20,25 @@ use Libxa\Http\Response;
  */
 class AuditLogController
 {
+    use AuthorizesRequests;
+
+    public function __construct(
+        protected AdminGuard $auth,
+    ) {
+    }
+
     private const MAX_PER_PAGE = 100;
 
     private const DEFAULT_PER_PAGE = 25;
 
     public function index(): Response
     {
+        // The trail records who deleted what, which makes it the last place
+        // an account with limited rights should be able to read freely.
+        if (($denied = $this->authorize(Permission::AUDIT_VIEW)) !== null) {
+            return $denied;
+        }
+
         $perPage = $this->perPage();
         $page = max(1, (int) (request()?->input('page') ?? 1));
 
@@ -60,6 +76,10 @@ class AuditLogController
 
     public function show(string $id): Response
     {
+        if (($denied = $this->authorize(Permission::AUDIT_VIEW)) !== null) {
+            return $denied;
+        }
+
         if (! ctype_digit($id)) {
             return response()->json(['message' => 'Not found.'])->withStatus(404);
         }

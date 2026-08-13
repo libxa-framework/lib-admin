@@ -126,7 +126,64 @@ class AdminPanel
             'label' => $resourceClass::getPluralLabel(),
             'href'  => '/admin/resources/' . $table,
             'group' => $resourceClass::getGroup(),
+
+            // What you need to hold for this link to be worth showing. A
+            // sidebar full of links that all answer 403 is not a security
+            // problem, but it is a panel nobody can navigate.
+            'permission' => $resourceClass::isAuthorized()
+                ? $resourceClass::permissionFor(\Libxa\Admin\Authorization\Permission::VIEW_ANY)
+                : null,
         ];
+    }
+
+    /**
+     * Navigation, minus what this admin cannot open.
+     *
+     * Hiding a link is presentation, never protection: every route checks for
+     * itself. This exists so the sidebar reflects what the account can
+     * actually do.
+     *
+     * @return array<int, array<string, mixed>>
+     */
+    public function navigationFor(?int $adminUserId): array
+    {
+        $gate = $this->gate();
+
+        return array_values(array_filter(
+            $this->navigationItems,
+            static function (array $item) use ($gate, $adminUserId): bool {
+                $permission = $item['permission'] ?? null;
+
+                return $permission === null || $gate->allows($adminUserId, $permission);
+            },
+        ));
+    }
+
+    /**
+     * Registered resources this admin may list.
+     *
+     * @return array<string, string>
+     */
+    public function resourcesFor(?int $adminUserId): array
+    {
+        $gate = $this->gate();
+
+        return array_filter(
+            $this->resources,
+            static function (string $class) use ($gate, $adminUserId): bool {
+                return ! $class::isAuthorized()
+                    || $gate->allows($adminUserId, $class::permissionFor(\Libxa\Admin\Authorization\Permission::VIEW_ANY));
+            },
+        );
+    }
+
+    private function gate(): \Libxa\Admin\Authorization\Gate
+    {
+        $app = app();
+
+        return $app !== null && $app->has('admin.gate')
+            ? $app->make('admin.gate')
+            : new \Libxa\Admin\Authorization\Gate();
     }
 
     /**
