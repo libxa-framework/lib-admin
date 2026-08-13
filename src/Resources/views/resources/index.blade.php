@@ -17,12 +17,14 @@
         </div>
     </div>
     <div class="flex items-center gap-3">
+        @if($can['create'] ?? true)
         <a href="/admin/resources/{{ $resource }}/create"
            class="flex items-center gap-2 px-5 py-2.5 bg-gradient-to-br from-primary to-primary-dim text-on-primary
                   text-sm font-bold rounded-xl shadow-lg shadow-primary/20 hover:opacity-90 transition-all active:scale-95">
             <span class="material-symbols-outlined text-lg">add</span>
             New {{ ucfirst(rtrim($resource, 's')) }}
         </a>
+        @endif
     </div>
 </div>
 
@@ -114,16 +116,21 @@
                             {{-- Action column --}}
                             <td class="px-6 py-4 text-right whitespace-nowrap">
                                 <div class="flex items-center justify-end gap-1">
+                                    @if($can['view'] ?? true)
                                     <a href="/admin/resources/{{ $resource }}/{{ $item->id }}"
                                        class="p-2 rounded-lg hover:bg-white text-on-surface-variant hover:text-primary transition-colors"
                                        title="View">
                                         <span class="material-symbols-outlined text-base">visibility</span>
                                     </a>
+                                    @endif
+                                    @if($can['update'] ?? true)
                                     <a href="/admin/resources/{{ $resource }}/{{ $item->id }}/edit"
                                        class="p-2 rounded-lg hover:bg-white text-on-surface-variant hover:text-amber-600 transition-colors"
                                        title="Edit">
                                         <span class="material-symbols-outlined text-base">edit</span>
                                     </a>
+                                    @endif
+                                    @if($can['delete'] ?? true)
                                     <form action="/admin/resources/{{ $resource }}/{{ $item->id }}" method="POST" class="inline">
                                         @csrf
                                         <input type="hidden" name="_method" value="DELETE">
@@ -134,6 +141,7 @@
                                             <span class="material-symbols-outlined text-base">delete</span>
                                         </button>
                                     </form>
+                                    @endif
                                 </div>
                             </td>
                         </tr>
@@ -165,11 +173,13 @@
                 <p class="font-bold text-on-surface">No {{ $resource }} found</p>
                 <p class="text-sm text-on-surface-variant mt-1">Create your first record to get started.</p>
             </div>
+            @if($can['create'] ?? true)
             <a href="/admin/resources/{{ $resource }}/create"
                class="mt-2 flex items-center gap-2 px-5 py-2.5 bg-primary text-on-primary text-sm font-bold rounded-xl shadow-lg shadow-primary/20 hover:opacity-90 transition-all">
                 <span class="material-symbols-outlined text-sm">add</span>
                 Create First {{ ucfirst(rtrim($resource, 's')) }}
             </a>
+            @endif
         </div>
     @endif
 </div>

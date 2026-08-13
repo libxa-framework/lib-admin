@@ -5,6 +5,8 @@ declare(strict_types=1);
 namespace Libxa\Admin\Http\Controllers;
 
 use Libxa\Admin\Auth\AdminGuard;
+use Libxa\Admin\Authorization\AuthorizesRequests;
+use Libxa\Admin\Authorization\Permission;
 use Libxa\Admin\Media\MediaStore;
 use Libxa\Http\Request;
 use Libxa\Http\Response;
@@ -27,6 +29,8 @@ use Throwable;
  */
 class MediaController
 {
+    use AuthorizesRequests;
+
     public function __construct(
         protected AdminGuard $auth,
     ) {
@@ -34,6 +38,10 @@ class MediaController
 
     public function index(): Response
     {
+        if (($denied = $this->authorize(Permission::MEDIA_VIEW)) !== null) {
+            return $denied;
+        }
+
         return view('admin::media.index', [
             'user' => $this->auth->user(),
             'media' => $this->store()->recent(),
@@ -42,6 +50,10 @@ class MediaController
 
     public function upload(Request $request): Response
     {
+        if (($denied = $this->authorize(Permission::MEDIA_UPLOAD)) !== null) {
+            return $denied;
+        }
+
         $file = $request->file('file') ?? $request->file('media');
 
         if ($file === null) {
@@ -66,6 +78,10 @@ class MediaController
 
     public function destroy(string $id): Response
     {
+        if (($denied = $this->authorize(Permission::MEDIA_DELETE)) !== null) {
+            return $denied;
+        }
+
         // Numeric only. The id reaches a WHERE clause, and while the builder
         // binds it, refusing a value that could never be a row id keeps the
         // shape of what is accepted obvious.

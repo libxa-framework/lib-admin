@@ -64,9 +64,49 @@ abstract class AdminResource
         return static::$softDeletes;
     }
 
+    /**
+     * Whether this resource is subject to permission checks.
+     *
+     * True by default, and deliberately so: a resource added without a
+     * thought about authorisation should be protected, not open. Set it false
+     * only for something every admin is meant to reach.
+     */
+    protected static bool $authorize = true;
+
+    /**
+     * The abilities this resource defines.
+     *
+     * `admin:sync-permissions` writes one permission per entry, named
+     * `<prefix>.<ability>`.
+     *
+     * @return list<string>
+     */
     public static function permissions(): array
     {
         return ['viewAny', 'view', 'create', 'update', 'delete', 'export', 'import'];
+    }
+
+    /**
+     * What this resource's permissions are named after.
+     *
+     * The URL slug, so `/admin/resources/subscribers` is governed by
+     * `subscribers.*` and the two cannot drift apart. Override it when two
+     * resources should share one set of permissions.
+     */
+    public static function permissionPrefix(): string
+    {
+        return strtolower(str_replace(' ', '_', (string) static::getPluralLabel()));
+    }
+
+    public static function isAuthorized(): bool
+    {
+        return static::$authorize;
+    }
+
+    /** The full permission name for one ability on this resource. */
+    public static function permissionFor(string $ability): string
+    {
+        return static::permissionPrefix() . '.' . $ability;
     }
 
     abstract public function columns(): array;

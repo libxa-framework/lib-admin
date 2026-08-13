@@ -118,10 +118,17 @@
     {{-- Navigation --}}
     <nav class="flex-1 space-y-0.5">
         @php
+            // Filtered by what this account may open. Hiding a link is not
+            // the control — every route checks for itself — but a sidebar of
+            // links that all answer 403 is a panel nobody can navigate.
+            $navAdminId = isset($user) && is_object($user) && method_exists($user, 'getAuthIdentifier')
+                ? (is_numeric($user->getAuthIdentifier()) ? (int) $user->getAuthIdentifier() : null)
+                : null;
+
             // Always ensure Dashboard is first
             $navItems = array_merge(
                 [['icon' => 'dashboard', 'label' => 'Dashboard', 'href' => '/admin/dashboard', 'group' => 'General']],
-                \Libxa\Admin\Facades\Admin::getNavigation()
+                \Libxa\Admin\Facades\Admin::navigationFor($navAdminId)
             );
             $current = parse_url($_SERVER['REQUEST_URI'] ?? '/', PHP_URL_PATH) ?? '/';
             

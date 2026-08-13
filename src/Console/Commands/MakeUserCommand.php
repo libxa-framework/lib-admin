@@ -123,17 +123,32 @@ class MakeUserCommand extends Command
                 'password' => $password, // Password is hashed in the model
             ]);
 
+            // The defaults are created here rather than only in
+            // sync-permissions, because this is the command someone runs
+            // first. A first account with no role can log in and do nothing,
+            // and the tables to fix that are only reachable through the panel
+            // it cannot use.
+            $seeded = \Libxa\Admin\Authorization\Roles::seed();
+
             $attached = $this->attachRole($user, $role);
 
             $io->success("Admin user [$email] created successfully!");
+
+            if ($seeded !== []) {
+                $io->text(' Created the default roles: ' . implode(', ', $seeded));
+            }
 
             // Said "with role [x]" unconditionally before, including when
             // nothing was written to role_user. A panel that reports a
             // permission it did not grant is worse than one that grants none.
             if ($attached) {
                 $io->text(" Role: $role");
+
+                if ($role !== \Libxa\Admin\Authorization\Gate::SUPERADMIN) {
+                    $io->note("Run php libxa admin:sync-permissions so [$role] actually holds permissions. superadmin does not need it.");
+                }
             } else {
-                $io->warning("The role [$role] does not exist, so none was assigned. Create it in the roles table and attach it, or the user will have no permissions.");
+                $io->warning("No role named [$role], so none was assigned. Run php libxa admin:roles to see what exists.");
             }
 
             return Command::SUCCESS;
@@ -147,22 +162,17 @@ class MakeUserCommand extends Command
      * Attach a named role, if that role exists.
      *
      * Returns false when it does not, rather than creating one: roles carry
-     * permissions, and inventing a "superadmin" with an empty permission set
-     * would silently produce an account that cannot do anything.
+     * permissions, and inventing a role with an empty permission set would
+     * silently produce an account that cannot do anything.
      */
     private function attachRole(\Libxa\Admin\Models\AdminUser $user, string $role): bool
     {
-        $row = \Libxa\Atlas\DB::table('roles')->where('name', $role)->first();
+        $row = \Libxa\Admin\Authorization\Roles::find($role);
 
         if ($row === null) {
             return false;
         }
 
-        \Libxa\Atlas\DB::table('role_user')->insert([
-            'role_id' => $row->id,
-            'admin_user_id' => $user->getAuthIdentifier(),
-        ]);
-
-        return true;
+        return \Libxa\Admin\Authorization\Roles::attach((int) $row->id, (int) $user->getAuthIdentifier());
     }
 }
