@@ -36,7 +36,10 @@
 
     {{-- Main Form --}}
     <div class="col-span-12 lg:col-span-8">
+        @include('admin::partials.form-errors')
+
         <form action="/admin/resources/{{ $resource }}/{{ $item->id }}" method="POST" enctype="multipart/form-data">
+            @csrf
             <input type="hidden" name="_method" value="PUT">
 
             <section class="bg-surface-container-lowest p-8 rounded-2xl shadow-[0_12px_32px_-4px_rgba(42,52,57,0.06)] space-y-6">
@@ -149,6 +152,7 @@
             <p class="text-xs font-bold uppercase tracking-wider text-error mb-3">Danger Zone</p>
             <p class="text-xs text-on-surface-variant mb-4">Deleting this record is permanent and cannot be undone.</p>
             <form action="/admin/resources/{{ $resource }}/{{ $item->id }}" method="POST">
+                @csrf
                 <input type="hidden" name="_method" value="DELETE">
                 <button type="submit"
                         onclick="return confirm('Permanently delete this {{ rtrim($resource, 's') }}?')"

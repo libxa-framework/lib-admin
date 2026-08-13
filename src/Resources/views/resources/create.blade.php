@@ -31,7 +31,10 @@
 
     {{-- Main Form --}}
     <div class="col-span-12 lg:col-span-8">
+        @include('admin::partials.form-errors')
+
         <form action="/admin/resources/{{ $resource }}" method="POST" enctype="multipart/form-data">
+            @csrf
 
             <section class="bg-surface-container-lowest p-8 rounded-2xl shadow-[0_12px_32px_-4px_rgba(42,52,57,0.06)] space-y-6">
                 <div class="flex items-center gap-2 pb-2 border-b border-slate-100">

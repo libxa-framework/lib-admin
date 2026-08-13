@@ -59,10 +59,12 @@ $router->group(['middleware' => \Libxa\Admin\Http\Middleware\AdminAuthMiddleware
     $router->delete('/media/{id}', [\Libxa\Admin\Http\Controllers\MediaController::class, 'destroy'])
         ->name('admin.media.destroy');
 
-    // Settings routes
-    $router->get('/settings', [\Libxa\Admin\Http\Controllers\SettingsController::class, 'index'])
-        ->name('admin.settings');
-
-    $router->put('/settings', [\Libxa\Admin\Http\Controllers\SettingsController::class, 'update'])
-        ->name('admin.settings.update');
+    // Settings routes are not registered.
+    //
+    // SettingsController was a stub: index() rendered a view that was never
+    // written, so /admin/settings answered 500, and update() returned
+    // "Settings updated successfully" without writing anything. A route that
+    // reports success for work it did not do is worse than a missing feature,
+    // because people build on it. The controller is kept, unrouted, so the
+    // shape is there when a real settings store is designed.
 });
